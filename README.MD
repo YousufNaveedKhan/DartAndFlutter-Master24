@@ -7,12 +7,12 @@ Welcome to the **Dart and Flutter Master Course 2024** repository. This course h
 
 This repository is organized into four primary directories, each dedicated to different aspects of the course. Below is the structured layout of the repository:
 
-````DartAndFlutter-Master24/ 
-                        │ 
+DartAndFlutter-Master24/ 
+                     ```│ 
                         ├── 01-DartProgramming 
                         ├── 02-FlutterPrimary 
                         ├── 03-FlutterSecondary 
-                        └── All-Material````
+                        └── All-Material```
 
 
 ### 1. `01-DartProgramming`

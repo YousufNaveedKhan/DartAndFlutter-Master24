@@ -38,10 +38,10 @@ class _SplashScrState extends State<SplashScr> {
   @override
   void initState() {
     super.initState();
-    Timer(const Duration(seconds: 3), (() {
+    Timer(const Duration(seconds: 3), () {
       Navigator.pushReplacement(
           context, MaterialPageRoute(builder: (context) => SurahIndex()));
-    }));
+    });
   }
 
   @override
@@ -220,17 +220,6 @@ class _SurahIndexState extends State<SurahIndex> {
                                 ),
                                 onPressed: () => toggleBookmark(index + 1),
                               ),
-                              IconButton(
-                                icon: Icon(Icons.book, color: Colors.blue),
-                                onPressed: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => const Center(child: Text('Tafseer will be uploaded soon!')),
-                                    ),
-                                  );
-                                },
-                              ),
                             ],
                           ),
                           leading: Padding(
@@ -277,7 +266,8 @@ class _DetailSurahState extends State<DetailSurah> {
   Future<void> callApi() async {
     int snum = widget.indexnumber;
     try {
-      final response = await http.get(Uri.parse("https://api.alquran.cloud/v1/surah/${snum}"));
+      final response = await http
+          .get(Uri.parse("https://api.alquran.cloud/v1/surah/${snum}"));
 
       if (response.statusCode == 200) {
         setState(() {
@@ -297,10 +287,15 @@ class _DetailSurahState extends State<DetailSurah> {
 
   Future<void> fetchEnglishTranslation(int surahNumber) async {
     try {
-      final response = await http.get(Uri.parse("http://api.alquran.cloud/v1/surah/$surahNumber/en.asad"));
+      final response = await http.get(
+          Uri.parse("http://api.alquran.cloud/v1/surah/$surahNumber/en.asad"));
       if (response.statusCode == 200) {
         final translationMap = jsonDecode(response.body);
-        englishTranslations = translationMap["data"]["ayahs"].map((ayah) => ayah["text"]).toList();
+        setState(() {
+          englishTranslations = translationMap["data"]["ayahs"]
+              .map((ayah) => ayah["text"])
+              .toList();
+        });
       } else {
         print("Error fetching English translation: ${response.statusCode}");
       }
@@ -316,42 +311,29 @@ class _DetailSurahState extends State<DetailSurah> {
     callApi();
   }
 
-  Future<void> playAyah(int ayahIndex) async {
-    if (listresp.isNotEmpty) {
+  Future<void> playAyah(int index) async {
+    if (listresp.isNotEmpty && index < listresp.length) {
+      String audioUrl = listresp[index]["audio"];
+
       try {
-        final audioUrl = listresp[ayahIndex]['audio'];
-        print("Playing audio from: $audioUrl"); // Log the audio URL
-        await audioPlayer.setUrl(audioUrl);
-        await audioPlayer.play();
-
-        setState(() {
-          currentlyPlayingIndex = ayahIndex;
-        });
-
-        audioPlayer.playerStateStream.listen((state) {
-          if (!state.playing) {
-            setState(() {
-              currentlyPlayingIndex = null;
-            });
+        if (currentlyPlayingIndex == index) {
+          // If the same ayah is playing, toggle pause/play
+          if (audioPlayer.playing) {
+            await audioPlayer.pause();
+          } else {
+            await audioPlayer.play();
           }
-        });
+        } else {
+          // Play new ayah
+          await audioPlayer.setUrl(audioUrl);
+          await audioPlayer.play();
+          setState(() {
+            currentlyPlayingIndex = index;
+          });
+        }
       } catch (e) {
-        print('Error playing audio: $e');
+        print("Error playing audio: $e");
       }
-    }
-  }
-
-  Future<void> togglePlayPause(int ayahIndex) async {
-    if (currentlyPlayingIndex == ayahIndex) {
-      audioPlayer.pause();
-      setState(() {
-        currentlyPlayingIndex = null;
-      });
-    } else {
-      if (currentlyPlayingIndex != null) {
-        audioPlayer.stop();
-      }
-      await playAyah(ayahIndex);
     }
   }
 
@@ -363,81 +345,55 @@ class _DetailSurahState extends State<DetailSurah> {
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        appBar: AppBar(
-          title: Text('Al-Huda Quran App', style: GoogleFonts.amiriQuran()),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Quran'),
-              Tab(text: 'Bookmarks'),
-              Tab(text: 'Tafseer'),
-            ],
-          ),
-        ),
-        body: TabBarView(
-          children: [
-            listresp.isNotEmpty && englishTranslations.isNotEmpty
-                ? ListView.builder(
-                    itemCount: listresp.length,
-                    itemBuilder: (context, index) {
-                      bool isPlaying = currentlyPlayingIndex == index;
-                      return Card(
-                        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
-                        child: ListTile(
-                          title: Text(
-                            listresp[index]["text"],
-                            style: GoogleFonts.amiriQuran(),
-                            textDirection: TextDirection.rtl,
-                          ),
-                          subtitle: Text(
-                            englishTranslations[index],
-                            style: const TextStyle(color: Colors.grey),
-                          ),
-                          trailing: IconButton(
-                            icon: Icon(
-                              isPlaying ? Icons.pause_circle_filled : Icons.play_circle_filled,
-                              color: Colors.green,
-                              size: 32,
-                            ),
-                            onPressed: () => togglePlayPause(index),
-                          ),
-                          leading: IconButton(
-                            icon: Icon(Icons.book, color: Colors.blue),
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const Center(
-                                      child: Text('Tafseer Tab Content')),
-                                ),
-                              );
-                            },
-                          ),
-                        ),
-                      );
-                    },
-                  )
-                : const Center(child: CircularProgressIndicator()),
-            const Center(child: Text('Bookmarks Tab Content')),
-            const Center(child: Text('Tafseer Tab Content')),
-          ],
-        ),
-      ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ayat Detail')),
+      body: listresp.isNotEmpty
+          ? ListView.builder(
+              itemCount: listresp.length,
+              itemBuilder: (context, index) {
+                bool isPlaying = currentlyPlayingIndex == index;
+
+                return Card(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.green,
+                      child: Text(listresp[index]["numberInSurah"].toString(),
+                          style: const TextStyle(color: Colors.white)),
+                    ),
+                    title: Text(
+                      listresp[index]["text"],
+                      textDirection: TextDirection.rtl,
+                      style: GoogleFonts.amiriQuran(fontSize: 18),
+                    ),
+                    subtitle: Text(
+                      englishTranslations.isNotEmpty
+                          ? englishTranslations[index]
+                          : '',
+                      textDirection: TextDirection.ltr,
+                      style: GoogleFonts.nunito(fontSize: 15),
+                    ),
+                    trailing: IconButton(
+                      icon: Icon(
+                        isPlaying ? Icons.pause : Icons.play_arrow,
+                        color: isPlaying ? Colors.green : null,
+                      ),
+                      onPressed: () => playAyah(index),
+                    ),
+                  ),
+                );
+              },
+            )
+          : const Center(child: CircularProgressIndicator()),
     );
   }
 }
-
-
 
 class BookmarksTab extends StatelessWidget {
   final List<int> bookmarkedSurahs;
   final List allSurahs;
 
   const BookmarksTab(
-      {Key? key, required this.bookmarkedSurahs, required this.allSurahs})
-      : super(key: key);
+      {super.key, required this.bookmarkedSurahs, required this.allSurahs});
 
   @override
   Widget build(BuildContext context) {
@@ -446,22 +402,11 @@ class BookmarksTab extends StatelessWidget {
       itemBuilder: (context, index) {
         int surahIndex = bookmarkedSurahs[index] - 1;
         return ListTile(
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => DetailSurah(bookmarkedSurahs[index]),
-              ),
-            );
-          },
-          title: Text(
-            "${allSurahs[surahIndex]["name"]} | ${allSurahs[surahIndex]["englishName"]}",
-            style: GoogleFonts.amiriQuran(),
-          ),
+          title: Text(allSurahs[surahIndex]["englishName"] ?? ''),
           subtitle: Text(allSurahs[surahIndex]["englishNameTranslation"] ?? ''),
+          trailing: const Icon(Icons.bookmark),
         );
       },
     );
   }
 }
-

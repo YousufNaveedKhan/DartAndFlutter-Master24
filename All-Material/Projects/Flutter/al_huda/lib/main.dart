@@ -355,7 +355,7 @@ class _DetailSurahState extends State<DetailSurah> {
 
                 return Card(
                   child: ListTile(
-                    leading: CircleAvatar(
+                    trailing: CircleAvatar(
                       backgroundColor: Colors.green,
                       child: Text(listresp[index]["numberInSurah"].toString(),
                           style: const TextStyle(color: Colors.white)),
@@ -372,7 +372,7 @@ class _DetailSurahState extends State<DetailSurah> {
                       textDirection: TextDirection.ltr,
                       style: GoogleFonts.nunito(fontSize: 15),
                     ),
-                    trailing: IconButton(
+                    leading: IconButton(
                       icon: Icon(
                         isPlaying ? Icons.pause : Icons.play_arrow,
                         color: isPlaying ? Colors.green : null,
